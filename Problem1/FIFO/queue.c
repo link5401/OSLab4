@@ -3,8 +3,10 @@
 #include "queue.h"
 #include <pthread.h>
 
+
 /* Remember to initilize the queue before using it */
 void initialize_queue(struct pqueue_t * q) {
+	q = malloc(sizeof(struct pqueue_t));
 	q->head = q->tail = NULL;
 	pthread_mutex_init(&q->lock, NULL);
 }
@@ -21,17 +23,40 @@ struct pcb_t * de_queue(struct pqueue_t * q) {
 	// TODO: return q->head->data and remember to update the queue's head
 	// and tail if necessary. Remember to use 'lock' to avoid race
 	// condition
-	
-	// YOUR CODE HERE
+	pthread_mutex_lock(&q->lock);
 
+	if(q->head == NULL);
+	else{
+		proc=q->head->data;
+		struct qitem_t * temp = q->head;
+		q->head=q->head->next;
+		free(temp);
+		
+	}
+
+	pthread_mutex_unlock(&q->lock);
 	return proc;
 }
 
 /* Put PCB of a process to the queue. */
+
 void en_queue(struct pqueue_t * q, struct pcb_t * proc) {
 	// TODO: Update q->tail.
 	// Remember to use 'lock' to avoid race condition
+	pthread_mutex_lock(&q->lock);
+struct qitem_t * temp = (struct qitem_t*)malloc(sizeof(struct qitem_t*));	
+	temp->data = proc;
+	temp->next = NULL;
+
+	if(q->head == NULL){
+		q->head = q->tail = temp;
+	}
+	else{
+		q->tail->next=temp;
+		q->tail=temp;
+	}
 	
+	pthread_mutex_unlock(&q->lock);
 	// YOUR CODE HERE
 	
 }

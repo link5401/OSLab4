@@ -15,12 +15,16 @@ static int load_done = 0;
 static int timeslot; 	// The maximum amount of time a process is allowed
 			// to be run on CPU before being swapped out
 
+
 // Emulate the CPU
 void * cpu(void * arg) {
+	
 	int timestamp = 0;
 	/* Keep running until we have loaded all process from the input file
 	 * and there is no process in ready queue */
+
 	while (!load_done || !empty(&ready_queue)) {
+	
 		/* Pickup the first process from the queue */
 		struct pcb_t * proc = de_queue(&ready_queue);
 		if (proc == NULL) {
@@ -41,7 +45,7 @@ void * cpu(void * arg) {
 			// TODO: Calculate exec_time from process's PCB
 			
 			// YOUR CODE HERE
-			
+			exec_time = proc->burst_time;	
 			/* Emulate the execution of the process by using
 			 * 'usleep()' function */
 			usleep(exec_time * TIME_UNIT);
@@ -52,20 +56,31 @@ void * cpu(void * arg) {
 			// TODO: Check if the process has terminated (i.e. its
 			// burst time is zero. If so, free its PCB. Otherwise,
 			// put its PCB back to the queue.
-			
-			// YOUR CODE HERE
+			proc->burst_time -= exec_time;
+					// YOUR CODE HERE
 			
 			/* Track runtime status */
 			printf("%2d-%2d: Execute %d\n", start, timestamp, id);
+			if(proc->burst_time == 0){
+				printf("PROCESS %d TERMINATED! \n TAT: %d\n",proc->pid,timestamp-proc->arrival_time);						
+				free(proc);	
+			}
+
+		
 		}
+	
 	}
+
+	
 }
 
 // Emulate the loader
 void * loader(void * arg) {
 	int timestamp = 0;
+	
 	/* Keep loading new process until the in_queue is empty*/
 	while (!empty(&in_queue)) {
+					
 		struct pcb_t * proc = de_queue(&in_queue);
 		/* Loader sleeps until the next process available */
 		int wastetime = proc->arrival_time - timestamp;
@@ -73,9 +88,13 @@ void * loader(void * arg) {
 		/* Update timestamp and put the new process to ready queue */
 		timestamp += wastetime;
 		en_queue(&ready_queue, proc);
+	
 	}
+	
+
 	/* We have no process to load */
 	load_done = 1;
+	
 }
 
 /* Read the list of process to be executed from stdin */
@@ -99,10 +118,9 @@ int main() {
 	/* Initialize queues */
 	initialize_queue(&in_queue);
 	initialize_queue(&ready_queue);
-
+	
 	/* Read a list of jobs to be run */
 	load_task();
-
 	/* Start cpu */
 	pthread_create(&cpu_id, NULL, cpu, NULL);
 	/* Start loader */

@@ -19,7 +19,7 @@ struct mem_region * free_regions = NULL;
 struct mem_region * used_regions = NULL;
 
 
-static void * best_fit_allocator(unsigned int size);
+static void * worst_fit_allocator(unsigned int size);
 static void * first_fit_allocator(unsigned int size);
 
 int mem_init(unsigned int size) {
@@ -73,11 +73,11 @@ void * mem_alloc(unsigned int size) {
 	// Follow is FIST FIT allocator used for demonstration only.
 	// You need to implment your own BEST FIT allocator.
 	// TODO: Comment the next line
-	void * pointer = first_fit_allocator(size);
+	//void * pointer = first_fit_allocator(size);
 	// Commnent out the previous line and uncomment to next line
 	// to invoke best fit allocator
 	// TODO: uncomment the next line
-	//void * pointer = best_fit_allocator(size);
+	void * pointer = worst_fit_allocator(size);
 	
 	// FOR VERIFICATION ONLY. DO NOT REMOVE THESE LINES
 	if (pointer != NULL) {
@@ -183,9 +183,57 @@ void mem_free(void * pointer) {
 	pthread_mutex_unlock(&lock);
 }
 
-void * best_fit_allocator(unsigned int size) {
+void * worst_fit_allocator(unsigned int size) {
 	// TODO: Implement your best fit allocator here
-	return NULL; // remember to remove this line 
+	int found = 0;
+	struct mem_region * current_region = free_regions;
+	struct mem_region * temp_region =free_regions;
+	do {
+		if (size <= temp_region->size) {
+			if(current_region->size < temp_region->size) current_region = temp_region;
+			found = 1;
+		}
+			temp_region = temp_region->next;
+		
+	} while (!found && temp_region != NULL);
+	
+	if (found) {
+		struct mem_region* tmp =
+			(struct mem_region*)malloc(sizeof(struct mem_region));
+		tmp->pointer = current_region->pointer;
+		tmp->size = size;
+		tmp->next = used_regions;
+		tmp->prev = NULL;
+		if (used_regions == NULL) {
+			used_regions = tmp;
+		}else{
+			used_regions->prev = tmp;
+			used_regions = tmp;
+		}
+		if (current_region->size == size) {
+			if (current_region == free_regions) {
+				free_regions = free_regions->next;
+				if (free_regions != NULL) {
+					free_regions->prev = NULL;
+				}
+			}else{
+				if (current_region->prev != NULL) {
+					current_region->prev->next = current_region->next;
+				}
+				if (current_region->next != NULL) {
+					current_region->next->prev = current_region->prev;
+				}
+			}
+			free(current_region);
+		}else{
+			current_region->pointer += size;
+			current_region->size -= size;
+		}
+		return tmp->pointer;
+	}else{
+		return NULL;
+	}
+
 }
 
 void * first_fit_allocator(unsigned int size) {
